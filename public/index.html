@@ -12,8 +12,6 @@
             margin: 0;
             padding: 0;
             display: flex;
-            justify-content: flex-start; /* 靠左 */
-            align-items: flex-start;     /* 靠上 */
             padding: 20px;               /* 建议加一点点边距，不然贴着边缘太挤了 */
         }
         
@@ -48,7 +46,7 @@
             // 自动计算起始日期：显示最近 6 个月（包含本月）
             var now = new Date();
             var startDate = new Date(now);
-            startDate.setMonth(now.getMonth() - 5);
+            startDate.setMonth(now.getMonth() - 11);
 
             // 初始化热力图
             const cal = new CalHeatMap();
@@ -60,7 +58,7 @@
                 subDomain: "day",
                 
                 start: startDate,
-                range: 6,
+                range: 12,
                 
                 data: baseUrl + "/api/database",
                 dataType: "json",
@@ -107,3 +105,5 @@
     </script>
 </body>
 </html>
+
+
