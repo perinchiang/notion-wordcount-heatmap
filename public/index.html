@@ -6,107 +6,99 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap/cal-heatmap.css" />
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 20px;
+            /* 居中显示 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #cal-heatmap {
+            /* 避免宽度太窄 */
+            min-width: 800px; 
         }
     </style>
 </head>
 <body>
+
     <div id="cal-heatmap"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/d3@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/cal-heatmap/cal-heatmap.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const baseUrl = window.location.origin;
             
-            // 🐛 调试开关：打开浏览器控制台(F12)能看到数据
-            const debugMode = true; 
+            // --- 💡 自动计算起始日期逻辑 ---
+            // 获取当前时间
+            var now = new Date();
+            // 复制一份时间对象用来做计算
+            var startDate = new Date(now);
+            // 往前推 5 个月 (加上本月就是显示 6 个月)
+            startDate.setMonth(now.getMonth() - 5);
 
-            // 🔥 关键修改：如果你做的是 2026 年的模板，这里要强制写死 2026
-            // 如果你要卖通用模板，可以写 new Date()，但在测试 2026 数据时必须改这里！
-            const startDate = new Date("2026-01-01"); 
-
+            // 初始化热力图
             const cal = new CalHeatMap();
             cal.init({
                 itemSelector: "#cal-heatmap",
-                domain: "month",
-                subDomain: "day",
+                domain: "month",      // 大格子是月份
+                subDomain: "day",     // 小格子是天
+                
+                // --- 关键配置 1: 动态日期 ---
+                start: startDate,     // 动态起始日期
+                range: 6,             // 显示 6 个月
+                
+                // --- 关键配置 2: 数据源 ---
                 data: baseUrl + "/api/database",
-                
-                // 设定开始时间
-                start: startDate, 
-                
-                // 设定显示几个月 (显示一整年)
-                range: 12, 
-                
+                dataType: "json",     // 显式指定数据类型
+
                 cellSize: 12,
                 cellPadding: 2,
-                tooltip: true,
-                nextSelector: "#next",
-                previousSelector: "#previous",
-                considerMissingDataAsZero: true,
+                domainGutter: 10,     // 月份之间的间距
                 
-                // 分级阈值：>0变色, >500深色...
-                legend: [1, 500, 1000, 2000],
+                // --- 关键配置 3: 颜色阈值 ---
+                // 1字变浅绿，200字变中绿，500字变深绿，1000字变最深绿
+                legend: [1, 200, 500, 1000],
+                
+                // 自定义颜色 (类似 GitHub 风格)
                 legendColors: {
-                    min: "#ebedf0",
-                    max: "#216e39",
-                    empty: "#ebedf0"
+                    min: "#ebedf0",   // 0字 (灰色)
+                    max: "#216e39",   // 最深绿
+                    empty: "#ebedf0"  // 无数据
                 },
-                
+
+                // 鼠标悬停提示
+                tooltip: true,
                 subDomainTitleFormat: {
                     empty: "{date}: 摸鱼 (0字)",
                     filled: "{date}: {count} 字"
                 },
                 
-                // 数据处理与调试
+                // 数据加载后的处理 (将 YYYY-MM-DD 转为秒级时间戳)
                 afterLoadData: function(data) {
-                    if (debugMode) {
-                        console.log("🔥 [前端调试] 后端返回的原始数据:", data);
-                    }
-
+                    // 如果后端返回空，直接返回空对象
                     if (!data || data.length === 0) {
-                        console.warn("⚠️ [前端警告] 后端返回了空数组！请检查 Vercel 环境变量。");
+                        console.warn("后端返回数据为空");
                         return {};
                     }
-                    
+
                     var result = {};
                     data.forEach(function(item) {
-                        // 时间戳转换
-                        var date = new Date(item.date).getTime() / 1000;
-                        result[date] = item.count;
-                        
-                        if (debugMode) {
-                           console.log(`📅 处理日期: ${item.date}, 字数: ${item.count}, 时间戳: ${date}`);
-                        }
+                        // 将后端返回的日期字符串 (2026-01-01) 转换为秒级时间戳
+                        var dateTimestamp = Math.floor(new Date(item.date).getTime() / 1000);
+                        result[dateTimestamp] = item.count;
                     });
-                    
-                    // 检查是否有数据落在显示范围内
-                    const startTime = startDate.getTime() / 1000;
-                    const hasValidData = Object.keys(result).some(t => t >= startTime);
-                    if (!hasValidData && debugMode) {
-                         console.error("❌ [严重错误] 有数据，但都在显示范围之外！请检查 start 日期设置。");
-                    }
-
                     return result;
                 }
             });
 
-            // 60秒自动刷新
+            // 每 60 秒自动刷新一次数据
             setInterval(function() {
                 cal.update(baseUrl + "/api/database");
             }, 60000);
         });
     </script>
-
-            // 每 60 秒刷新一次
-            setInterval(function() {
-                cal.update(baseUrl + "/api/database");
-            }, 60000);
-        });
-    </script>
-            
 </body>
 </html>
-
-
